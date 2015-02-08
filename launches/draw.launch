@@ -1,0 +1,17 @@
+<launch>
+  <param name="/use_sim_time" value="True" />
+
+  <node name="draw_frames" pkg="learning_image_geometry" type="draw_frames" args="/bumblebee /radaresr" output="screen">
+    <remap from="image" to="camera/left/image_raw" />
+  </node>
+
+  <node name="input_viewer" pkg="image_view" type="image_view">
+    <remap from="image" to="camera/left/image_raw" />
+    <param name="autosize" value="True" />
+  </node>
+
+  <node name="output_viewer" pkg="image_view" type="image_view">
+    <remap from="image" to="image_out" />
+    <param name="autosize" value="True" />
+  </node>
+</launch>
