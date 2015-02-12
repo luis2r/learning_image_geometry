@@ -189,7 +189,12 @@ public:
             cv::circle(image, uv, RADIUS, CV_RGB(0, 255, 0), -1);
             
             
+//            p1(200,40), p2(10,100)         px=distancia radar            py= tmanho ventana
             
+//             x-200      y-40
+//           -------- = --------  
+//            10-200     100-40
+                     
             double w = (-60*data_.range_track + 19600)/190;
             double h = w;
             
