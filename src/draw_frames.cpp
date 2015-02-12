@@ -17,12 +17,13 @@ class FrameDrawer {
     image_transport::CameraSubscriber sub_;
     ros::Subscriber subradar_;
 
+    radaresr15::radaresr15Data data_;
+    radaresr15::radaresr15DataArray::ConstPtr radarDataArray_;
     image_transport::Publisher pub_;
     tf::TransformListener tf_listener_;
     image_geometry::PinholeCameraModel cam_model_;
     std::vector<std::string> frame_ids_;
-    radaresr15::radaresr15Data data_;
-    radaresr15::radaresr15DataArray::ConstPtr radarDataArray_;
+
     CvFont font_;
     int radarMsgLength_;
 
@@ -30,8 +31,8 @@ public:
 
     FrameDrawer(const std::vector<std::string>& frame_ids)
     : it_(nh_), frame_ids_(frame_ids) {
-        std::string image_topic = nh_.resolveName("image");
         subradar_ = nh_.subscribe("radar15_msg_array", 1000, &FrameDrawer::radarCallback, this);
+        std::string image_topic = nh_.resolveName("image");
         sub_ = it_.subscribeCamera(image_topic, 1, &FrameDrawer::imageCb, this);
         pub_ = it_.advertise("image_out", 1);
         cvInitFont(&font_, CV_FONT_HERSHEY_SIMPLEX, 0.5, 0.5);
@@ -63,26 +64,26 @@ public:
             radar_point.header.stamp = ros::Time();
 
             //just an arbitrary point in space
-//            radar_point.point.x = 0.0+i;
-//            radar_point.point.y = 0.0;
+            //            radar_point.point.x = 0.0+i;
+            //            radar_point.point.y = 0.0;
             radar_point.point.x = data_.y_track;
             radar_point.point.y = -data_.x_track;
             radar_point.point.z = 0.0;
 
             //            data_ = data;
             //double angle = msg->tracks[i].angle_track;
-//            int indice = data_.id_track;
-//            double X = data_.x_track;
-//            double Y = data_.y_track;
-//            ROS_INFO("id im: [%d]", (int) data_.id_track);
-//            ROS_INFO("x im: [%f]", (double) data_.x_track);
-//            ROS_INFO("y im: [%f]", (double) data_.y_track);
-//
-//            if (X == 0 && Y == 0) {
-//
-//            } else {
-//
-//            }
+            //            int indice = data_.id_track;
+            //            double X = data_.x_track;
+            //            double Y = data_.y_track;
+            //            ROS_INFO("id im: [%d]", (int) data_.id_track);
+            //            ROS_INFO("x im: [%f]", (double) data_.x_track);
+            //            ROS_INFO("y im: [%f]", (double) data_.y_track);
+            //
+            //            if (X == 0 && Y == 0) {
+            //
+            //            } else {
+            //
+            //            }
 
             geometry_msgs::PointStamped bumblebee_point;
             try {
@@ -150,12 +151,15 @@ public:
             ROS_INFO("ind cords 2d:  %f , %f ", uv.x, uv.y);
             static const int RADIUS = 3;
             cv::circle(image, uv, RADIUS, CV_RGB(0, 255, 0), -1);
-//            CvSize text_size;
-//            int baseline;
-//            cvGetTextSize("radaresr", &font_, &text_size, &baseline);
-//            CvPoint origin = cvPoint(uv.x - text_size.width / 2,
-//                    uv.y - RADIUS - baseline - 3);
-//            cv::putText(image, "radaresr", origin, cv::FONT_HERSHEY_SIMPLEX, 1, CV_RGB(255, 0, 0));
+            if(radar_point.point.x != 0.0){
+                cv::rectangle(image,cvPoint(uv.x-180+radar_point.point.x, uv.y-180+radar_point.point.x),cvPoint(uv.x+180-radar_point.point.x,uv.y+180-radar_point.point.x),CV_RGB(0,255,0),1,8);
+            }
+            //            CvSize text_size;
+            //            int baseline;
+            //            cvGetTextSize("radaresr", &font_, &text_size, &baseline);
+            //            CvPoint origin = cvPoint(uv.x - text_size.width / 2,
+            //                    uv.y - RADIUS - baseline - 3);
+            //            cv::putText(image, "radaresr", origin, cv::FONT_HERSHEY_SIMPLEX, 1, CV_RGB(255, 0, 0));
         }
 
 
