@@ -10,6 +10,9 @@
 #include  <beginner_tutorials/Num.h>
 #include  <radaresr15/radaresr15Data.h>
 #include <geometry_msgs/PointStamped.h>
+#include <opencv2/highgui/highgui.hpp>
+#include  <string>
+#include  <iostream>
 
 class FrameDrawer {
     ros::NodeHandle nh_;
@@ -49,6 +52,39 @@ public:
             ROS_ERROR("[draw_frames] Failed to convert image");
             return;
         }
+
+
+
+        ////        IplImage* img;
+        ////	img = cvLoadImage( "TestImages/car3.png" );
+        //	CvMemStorage* storage = cvCreateMemStorage(0);
+        //	// Note that you must copy C:\Program Files\OpenCV\data\haarcascades\haarcascade_frontalface_alt2.xml
+        //	// to your working directory
+        //	CvHaarClassifierCascade* cascade = (CvHaarClassifierCascade*)cvLoad( "cars3.xml" );
+        //	double scale = 1.3;
+        //
+        //	static CvScalar colors[] = { {{0,0,255}}, {{0,128,255}}, {{0,255,255}}, 
+        //	{{0,255,0}}, {{255,128,0}}, {{255,255,0}}, {{255,0,0}}, {{255,0,255}} };
+        //
+        //	// Detect objects
+        //	cvClearMemStorage( storage );
+        //	CvSeq* objects = cvHaarDetectObjects( image, cascade, storage, 1.1, 4, 0, cv::Size( 40, 50 ));
+        //
+        //	CvRect* r;
+        //	// Loop through objects and draw boxes
+        //	for( int i = 0; i < (objects ? objects->total : 0 ); i++ ){
+        //		r = ( CvRect* )cvGetSeqElem( objects, i );
+        //		cv::rectangle( image, cv::Point( r->x, r->y ), cv::Point( r->x + r->width, r->y + r->height ),
+        //			colors[i%8]);
+        //	}
+        //
+        //	cv::namedWindow( "Output" );
+        //	cv::imshow( "Output", image );
+
+
+
+
+
 
         cam_model_.fromCameraInfo(info_msg);
 
@@ -151,15 +187,33 @@ public:
             ROS_INFO("ind cords 2d:  %f , %f ", uv.x, uv.y);
             static const int RADIUS = 3;
             cv::circle(image, uv, RADIUS, CV_RGB(0, 255, 0), -1);
-            if(radar_point.point.x != 0.0){
-                cv::rectangle(image,cvPoint(uv.x-180+radar_point.point.x, uv.y-180+radar_point.point.x),cvPoint(uv.x+180-radar_point.point.x,uv.y+180-radar_point.point.x),CV_RGB(0,255,0),1,8);
+            
+            
+            
+            double w = (-60*data_.range_track + 19600)/190;
+            double h = w;
+            
+            
+            
+            if (radar_point.point.x != 0.0) {
+                cv::rectangle(image, cvPoint(uv.x-w/2,uv.y-h/2), cvPoint(uv.x+w/2,uv.y+h/2), CV_RGB(0, 255, 0), 1, 8);
             }
             //            CvSize text_size;
             //            int baseline;
             //            cvGetTextSize("radaresr", &font_, &text_size, &baseline);
-            //            CvPoint origin = cvPoint(uv.x - text_size.width / 2,
-            //                    uv.y - RADIUS - baseline - 3);
-            //            cv::putText(image, "radaresr", origin, cv::FONT_HERSHEY_SIMPLEX, 1, CV_RGB(255, 0, 0));
+            CvPoint origin = cvPoint(uv.x, uv.y);
+
+//            double b = 3.0000;
+            std::string s;
+            // convert double b to string s
+            {
+                std::ostringstream ss;
+                ss << data_.range_track;
+                s = ss.str();
+            }
+
+
+            cv::putText(image, s, origin, cv::FONT_HERSHEY_SIMPLEX, 0.5, CV_RGB(255, 0, 0));
         }
 
 
