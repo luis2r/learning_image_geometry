@@ -1,6 +1,7 @@
 #include <ros/ros.h>
 #include <image_transport/image_transport.h>
 #include <opencv/cv.h>
+#include  <cv.h>
 #include <cv_bridge/cv_bridge.h>
 #include <image_geometry/pinhole_camera_model.h>
 #include <tf/transform_listener.h>
@@ -15,6 +16,8 @@
 #include  <iostream>
 
 class FrameDrawer {
+    CvHaarClassifierCascade *cascade;
+    CvMemStorage *storage;
     ros::NodeHandle nh_;
     image_transport::ImageTransport it_;
     image_transport::CameraSubscriber sub_;
@@ -54,7 +57,38 @@ public:
         }
 
 
+        cascade = (CvHaarClassifierCascade*) cvLoad("/home/luis/catkin_ws/src/learning_image_geometry/src/cars3.xml", 0, 0, 0);
+        storage = cvCreateMemStorage(0);
 
+        cv::Mat gray_image;
+        cv::cvtColor(image, gray_image, CV_BGR2GRAY);
+
+        //    Mat image = imread(argv[2], CV_LOAD_IMAGE_COLOR)
+        //    IplImage* frame1(image);        
+
+        //        IplImage* frame1 = cvLoadImage("car3.png", 1);
+        IplImage* frame1 = new IplImage(gray_image);
+        //        IplImage* frame1 =  cvCloneImage(&(IplImage)image);
+
+
+        //        detect(frame1);
+
+
+
+        CvSize img_size = cvGetSize(frame1);
+        CvSeq *object = cvHaarDetectObjects(frame1, cascade, storage, 1.1, //1.1,//1.5, //-------------------SCALE FACTOR
+                1, //2        //------------------MIN NEIGHBOURS
+                0, //CV_HAAR_DO_CANNY_PRUNING
+                cvSize(0, 0), //cvSize( 30,30), // ------MINSIZE
+                img_size //cvSize(70,70)//cvSize(640,480)  //---------MAXSIZE
+                );
+        ROS_INFO("Total:  %d ", object->total);
+        //    std::cout << "Total: " << object->total << " cars" << std::endl;
+        for (int i = 0; i < (object ? object->total : 0); i++) {
+            CvRect *r = (CvRect*) cvGetSeqElem(object, i);
+//            cvRectangle(image, cvPoint(r->x, r->y), cvPoint(r->x + r->width, r->y + r->height), CV_RGB(255, 0, 0), 2, 8, 0);
+            cv::rectangle(image, cvPoint(r->x, r->y), cvPoint(r->x + r->width, r->y + r->height), CV_RGB(255, 0, 0), 2, 8, 0);
+        }
         ////        IplImage* img;
         ////	img = cvLoadImage( "TestImages/car3.png" );
         //	CvMemStorage* storage = cvCreateMemStorage(0);
@@ -125,10 +159,10 @@ public:
             try {
 
                 tf_listener_.transformPoint(cam_model_.tfFrame(), radar_point, bumblebee_point);
-                ROS_INFO_STREAM("Frame cam  " << cam_model_.tfFrame());
-                ROS_INFO(" : (%f, %f. %f) -----> radar_link: (%f, %f, %f) at time %f",
-                        bumblebee_point.point.x, bumblebee_point.point.y, bumblebee_point.point.z, radar_point.point.x, radar_point.point.y, radar_point.point.z,
-                        bumblebee_point.header.stamp.toSec());
+                //                ROS_INFO_STREAM("Frame cam  " << cam_model_.tfFrame());
+                //                ROS_INFO(" : (%f, %f. %f) -----> radar_link: (%f, %f, %f) at time %f",
+                //                        bumblebee_point.point.x, bumblebee_point.point.y, bumblebee_point.point.z, radar_point.point.x, radar_point.point.y, radar_point.point.z,
+                //                        bumblebee_point.header.stamp.toSec());
             } catch (tf::TransformException& ex) {
                 ROS_ERROR("Received an exception trying to transform a point from \"base_laser\" to \"base_link\": %s", ex.what());
             }
@@ -177,38 +211,38 @@ public:
 
             //            tf::Point pt = transform.getOrigin();
             cv::Point3d pt_cv(bumblebee_point.point.x, bumblebee_point.point.y, bumblebee_point.point.z);
-            ROS_INFO("ind cords 3d:  %f , %f, %f", pt_cv.x, pt_cv.y, pt_cv.z);
-            ROS_INFO("ind cords bumble 3d:  %f , %f, %f", bumblebee_point.point.x, bumblebee_point.point.y, bumblebee_point.point.z);
+            //            ROS_INFO("ind cords 3d:  %f , %f, %f", pt_cv.x, pt_cv.y, pt_cv.z);
+            //            ROS_INFO("ind cords bumble 3d:  %f , %f, %f", bumblebee_point.point.x, bumblebee_point.point.y, bumblebee_point.point.z);
             //                    cv::Point3d pt_cv(radar_point.point.x, radar_point.point.y, radar_point.point.z);
             //                    ROS_INFO("ind cords 3d:  %f , %f, %f", radar_point.point.x, radar_point.point.y, radar_point.point.z);
             cv::Point2d uv;
             //            uv = cam_model_.project3dToPixel(bumblebee_point);
             uv = cam_model_.project3dToPixel(pt_cv);
-            ROS_INFO("ind cords 2d:  %f , %f ", uv.x, uv.y);
+            //            ROS_INFO("ind cords 2d:  %f , %f ", uv.x, uv.y);
             static const int RADIUS = 3;
             cv::circle(image, uv, RADIUS, CV_RGB(0, 255, 0), -1);
-            
-            
-//            p1(200,40), p2(10,100)         px=distancia radar            py= tmanho ventana
-            
-//             x-200      y-40
-//           -------- = --------  
-//            10-200     100-40
-                     
-            double w = (-60*data_.range_track + 19600)/190;
+
+
+            //            p1(200,40), p2(10,100)         px=distancia radar            py= tmanho ventana
+
+            //             x-200      y-40
+            //           -------- = --------  
+            //            10-200     100-40
+
+            double w = (-60 * data_.range_track + 19600) / 190;
             double h = w;
-            
-            
-            
+
+
+
             if (radar_point.point.x != 0.0) {
-                cv::rectangle(image, cvPoint(uv.x-w/2,uv.y-h/2), cvPoint(uv.x+w/2,uv.y+h/2), CV_RGB(0, 255, 0), 1, 8);
+                cv::rectangle(image, cvPoint(uv.x - w / 2, uv.y - h / 2), cvPoint(uv.x + w / 2, uv.y + h / 2), CV_RGB(0, 255, 0), 1, 8);
             }
             //            CvSize text_size;
             //            int baseline;
             //            cvGetTextSize("radaresr", &font_, &text_size, &baseline);
             CvPoint origin = cvPoint(uv.x, uv.y);
 
-//            double b = 3.0000;
+            //            double b = 3.0000;
             std::string s;
             // convert double b to string s
             {
@@ -230,6 +264,26 @@ public:
         //int indice = 0;
         radarDataArray_ = msgradar;
 
+    }
+
+    void detect(IplImage *img) {
+        CvSize img_size = cvGetSize(img);
+        CvSeq *object = cvHaarDetectObjects(img, cascade, storage, 1.1, //1.1,//1.5, //-------------------SCALE FACTOR
+                1, //2        //------------------MIN NEIGHBOURS
+                0, //CV_HAAR_DO_CANNY_PRUNING
+                cvSize(0, 0), //cvSize( 30,30), // ------MINSIZE
+                img_size //cvSize(70,70)//cvSize(640,480)  //---------MAXSIZE
+                );
+        ROS_INFO("Total:  %d ", object->total);
+        //    std::cout << "Total: " << object->total << " cars" << std::endl;
+        for (int i = 0; i < (object ? object->total : 0); i++) {
+            CvRect *r = (CvRect*) cvGetSeqElem(object, i);
+            cvRectangle(img, cvPoint(r->x, r->y), cvPoint(r->x + r->width, r->y + r->height), CV_RGB(255, 0, 0), 2, 8, 0);
+        }
+
+        //            namedWindow("Display window", WINDOW_AUTOSIZE); // Create a window for display.
+        //            Mat img1(img);
+        //        imshow("Display window", img1); // Show our image inside it.
     }
 
 };
