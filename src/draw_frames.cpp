@@ -46,6 +46,9 @@ public:
 
     void imageCb(const sensor_msgs::ImageConstPtr& image_msg, const sensor_msgs::CameraInfoConstPtr& info_msg) {
         cv::Mat image;
+        cascade = (CvHaarClassifierCascade*) cvLoad("/home/luis/catkin_ws/src/learning_image_geometry/cars3.xml", 0, 0, 0);
+        storage = cvCreateMemStorage(0);
+        //        cv::Mat gray_image;
         cv_bridge::CvImagePtr input_bridge;
 
         try {
@@ -55,70 +58,6 @@ public:
             ROS_ERROR("[draw_frames] Failed to convert image");
             return;
         }
-
-
-        cascade = (CvHaarClassifierCascade*) cvLoad("/home/luis/catkin_ws/src/learning_image_geometry/src/cars3.xml", 0, 0, 0);
-        storage = cvCreateMemStorage(0);
-
-        cv::Mat gray_image;
-        cv::cvtColor(image, gray_image, CV_BGR2GRAY);
-
-        //    Mat image = imread(argv[2], CV_LOAD_IMAGE_COLOR)
-        //    IplImage* frame1(image);        
-
-        //        IplImage* frame1 = cvLoadImage("car3.png", 1);
-        IplImage* frame1 = new IplImage(gray_image);
-        //        IplImage* frame1 =  cvCloneImage(&(IplImage)image);
-
-
-        //        detect(frame1);
-
-
-
-        CvSize img_size = cvGetSize(frame1);
-        CvSeq *object = cvHaarDetectObjects(frame1, cascade, storage, 1.1, //1.1,//1.5, //-------------------SCALE FACTOR
-                1, //2        //------------------MIN NEIGHBOURS
-                0, //CV_HAAR_DO_CANNY_PRUNING
-                cvSize(0, 0), //cvSize( 30,30), // ------MINSIZE
-                img_size //cvSize(70,70)//cvSize(640,480)  //---------MAXSIZE
-                );
-        ROS_INFO("Total:  %d ", object->total);
-        //    std::cout << "Total: " << object->total << " cars" << std::endl;
-        for (int i = 0; i < (object ? object->total : 0); i++) {
-            CvRect *r = (CvRect*) cvGetSeqElem(object, i);
-//            cvRectangle(image, cvPoint(r->x, r->y), cvPoint(r->x + r->width, r->y + r->height), CV_RGB(255, 0, 0), 2, 8, 0);
-            cv::rectangle(image, cvPoint(r->x, r->y), cvPoint(r->x + r->width, r->y + r->height), CV_RGB(255, 0, 0), 2, 8, 0);
-        }
-        ////        IplImage* img;
-        ////	img = cvLoadImage( "TestImages/car3.png" );
-        //	CvMemStorage* storage = cvCreateMemStorage(0);
-        //	// Note that you must copy C:\Program Files\OpenCV\data\haarcascades\haarcascade_frontalface_alt2.xml
-        //	// to your working directory
-        //	CvHaarClassifierCascade* cascade = (CvHaarClassifierCascade*)cvLoad( "cars3.xml" );
-        //	double scale = 1.3;
-        //
-        //	static CvScalar colors[] = { {{0,0,255}}, {{0,128,255}}, {{0,255,255}}, 
-        //	{{0,255,0}}, {{255,128,0}}, {{255,255,0}}, {{255,0,0}}, {{255,0,255}} };
-        //
-        //	// Detect objects
-        //	cvClearMemStorage( storage );
-        //	CvSeq* objects = cvHaarDetectObjects( image, cascade, storage, 1.1, 4, 0, cv::Size( 40, 50 ));
-        //
-        //	CvRect* r;
-        //	// Loop through objects and draw boxes
-        //	for( int i = 0; i < (objects ? objects->total : 0 ); i++ ){
-        //		r = ( CvRect* )cvGetSeqElem( objects, i );
-        //		cv::rectangle( image, cv::Point( r->x, r->y ), cv::Point( r->x + r->width, r->y + r->height ),
-        //			colors[i%8]);
-        //	}
-        //
-        //	cv::namedWindow( "Output" );
-        //	cv::imshow( "Output", image );
-
-
-
-
-
 
         cam_model_.fromCameraInfo(info_msg);
 
@@ -219,9 +158,6 @@ public:
             //            uv = cam_model_.project3dToPixel(bumblebee_point);
             uv = cam_model_.project3dToPixel(pt_cv);
             //            ROS_INFO("ind cords 2d:  %f , %f ", uv.x, uv.y);
-            static const int RADIUS = 3;
-            cv::circle(image, uv, RADIUS, CV_RGB(0, 255, 0), -1);
-
 
             //            p1(200,40), p2(10,100)         px=distancia radar            py= tmanho ventana
 
@@ -234,15 +170,55 @@ public:
 
 
 
-            if (radar_point.point.x != 0.0) {
-                cv::rectangle(image, cvPoint(uv.x - w / 2, uv.y - h / 2), cvPoint(uv.x + w / 2, uv.y + h / 2), CV_RGB(0, 255, 0), 1, 8);
+
+
+
+            if (uv.x >= 0 && uv.y >= 0 && uv.x < image.size().width - w && uv.y < image.size().height - h) {
+                //*****************haar cascade
+
+                cv::Mat gray_image;
+                cv::cvtColor(image, gray_image, CV_BGR2GRAY);
+                IplImage* frame1 = new IplImage(gray_image);
+
+                ROS_INFO("x im: [%f]", (double) uv.x);
+                ROS_INFO("y im: [%f]", (double) uv.y);
+
+                cvSetImageROI(frame1, cvRect(uv.x, uv.y, w, h));
+                //        detect(frame1); //cvAddS(frame1, cvScalar(150), frame1);
+                //            cv::Mat img1(img);
+                cv::Mat roi(image, cv::Rect(uv.x, uv.y, w, h));
+                //        cv::threshold(roi, roi, 50, 100, THRESH_BINARY);
+                CvSize img_size = cvGetSize(frame1);
+                CvSeq *object = cvHaarDetectObjects(frame1, cascade, storage, 1.1, //1.1,//1.5, //-------------------SCALE FACTOR
+                        1, //2        //------------------MIN NEIGHBOURS
+                        0, //CV_HAAR_DO_CANNY_PRUNING
+                        cvSize(0, 0), //cvSize( 30,30), // ------MINSIZE
+                        img_size //cvSize(70,70)//cvSize(640,480)  //---------MAXSIZE
+                        );
+                ROS_INFO("Total:  %d ", object->total);
+                //    std::cout << "Total: " << object->total << " cars" << std::endl;
+                for (int i = 0; i < (object ? object->total : 0); i++) {
+                    CvRect *r = (CvRect*) cvGetSeqElem(object, i);
+                    //            cvRectangle(image, cvPoint(r->x, r->y), cvPoint(r->x + r->width, r->y + r->height), CV_RGB(255, 0, 0), 2, 8, 0);
+                    cv::rectangle(roi, cvPoint(r->x, r->y), cvPoint(r->x + r->width, r->y + r->height), CV_RGB(255, 0, 0), 2, 8, 0);
+                }
+                cvResetImageROI(frame1);
+
+                //*****************fin haar cascade
             }
-            //            CvSize text_size;
-            //            int baseline;
-            //            cvGetTextSize("radaresr", &font_, &text_size, &baseline);
+
+
+
+
+
+            static const int RADIUS = 3;
+            cv::circle(image, uv, RADIUS, CV_RGB(0, 255, 0), -1);
+            if (radar_point.point.x != 0.0) {
+//                cv::rectangle(image, cvPoint(uv.x - w / 2, uv.y - h / 2), cvPoint(uv.x + w / 2, uv.y + h / 2), CV_RGB(0, 255, 0), 1, 8);
+            }
+
             CvPoint origin = cvPoint(uv.x, uv.y);
 
-            //            double b = 3.0000;
             std::string s;
             // convert double b to string s
             {
