@@ -165,7 +165,7 @@ public:
             //           -------- = --------  
             //            10-200     100-40
 
-            double w = (-60 * data_.range_track + 19600) / 190;
+            double w = ((-60 * data_.range_track + 19600) / 190)*2;
             double h = w;
 
 
@@ -173,7 +173,7 @@ public:
 
 
 
-            if (uv.x >= 0 && uv.y >= 0 && uv.x < image.size().width - w && uv.y < image.size().height - h) {
+            if (uv.x-w/2 >= 0 && uv.y-h/2 >= 0 && uv.x+w/2 < image.size().width - w && uv.y+h/2 < image.size().height - h) {
                 //*****************haar cascade
 
                 cv::Mat gray_image;
@@ -183,10 +183,10 @@ public:
                 ROS_INFO("x im: [%f]", (double) uv.x);
                 ROS_INFO("y im: [%f]", (double) uv.y);
 
-                cvSetImageROI(frame1, cvRect(uv.x, uv.y, w, h));
+                cvSetImageROI(frame1, cvRect(uv.x-w/2, uv.y-h/2, w, h));
                 //        detect(frame1); //cvAddS(frame1, cvScalar(150), frame1);
                 //            cv::Mat img1(img);
-                cv::Mat roi(image, cv::Rect(uv.x, uv.y, w, h));
+                cv::Mat roi(image, cv::Rect(uv.x-w/2, uv.y-h/2, w, h));
                 //        cv::threshold(roi, roi, 50, 100, THRESH_BINARY);
                 CvSize img_size = cvGetSize(frame1);
                 CvSeq *object = cvHaarDetectObjects(frame1, cascade, storage, 1.1, //1.1,//1.5, //-------------------SCALE FACTOR
@@ -228,7 +228,7 @@ public:
             }
 
 
-            cv::putText(image, s, origin, cv::FONT_HERSHEY_SIMPLEX, 0.5, CV_RGB(255, 0, 0));
+//            cv::putText(image, s, origin, cv::FONT_HERSHEY_SIMPLEX, 0.5, CV_RGB(255, 0, 0));
         }
 
 
