@@ -15,6 +15,15 @@
 #include  <string>
 #include  <iostream>
 
+#include "opencv2/objdetect/objdetect.hpp"
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
+
+
+/** Global variables haar nuevo*/
+cv::String face_cascade_name = "/home/luis/NetBeansProjects/car_detect/treinadosThiago/car_rear.xml";
+cv::CascadeClassifier face_cascade;
+
 class FrameDrawer {
     CvHaarClassifierCascade *cascade;
     CvMemStorage *storage;
@@ -26,9 +35,13 @@ class FrameDrawer {
     radaresr15::radaresr15Data data_;
     radaresr15::radaresr15DataArray::ConstPtr radarDataArray_;
     image_transport::Publisher pub_;
+    image_transport::Publisher pub2_;
     tf::TransformListener tf_listener_;
     image_geometry::PinholeCameraModel cam_model_;
     std::vector<std::string> frame_ids_;
+
+
+
 
     CvFont font_;
     int radarMsgLength_;
@@ -41,25 +54,70 @@ public:
         std::string image_topic = nh_.resolveName("image");
         sub_ = it_.subscribeCamera(image_topic, 1, &FrameDrawer::imageCb, this);
         pub_ = it_.advertise("image_out", 1);
+        pub2_ = it_.advertise("image_out2", 1);
         cvInitFont(&font_, CV_FONT_HERSHEY_SIMPLEX, 0.5, 0.5);
+
     }
 
     void imageCb(const sensor_msgs::ImageConstPtr& image_msg, const sensor_msgs::CameraInfoConstPtr& info_msg) {
+
         cv::Mat image;
+        cv::Mat image2;
         cascade = (CvHaarClassifierCascade*) cvLoad("/home/luis/catkin_ws/src/learning_image_geometry/cars3.xml", 0, 0, 0);
         storage = cvCreateMemStorage(0);
         //        cv::Mat gray_image;
         cv_bridge::CvImagePtr input_bridge;
+        cv_bridge::CvImagePtr input_bridge2;
 
         try {
             input_bridge = cv_bridge::toCvCopy(image_msg, sensor_msgs::image_encodings::BGR8);
+            input_bridge2 = cv_bridge::toCvCopy(image_msg, sensor_msgs::image_encodings::BGR8);
             image = input_bridge->image;
+            image2= input_bridge2->image;
         } catch (cv_bridge::Exception& ex) {
             ROS_ERROR("[draw_frames] Failed to convert image");
             return;
         }
 
         cam_model_.fromCameraInfo(info_msg);
+
+
+
+
+
+
+        cv::Mat gray_image;
+        cv::cvtColor(image2, gray_image, CV_BGR2GRAY);
+        IplImage* frame1 = new IplImage(gray_image);
+
+        //                                                ROS_INFO("x im: [%f]", (double) uv.x);
+        //                                                ROS_INFO("y im: [%f]", (double) uv.y);
+
+
+        CvSize img_size = cvGetSize(frame1);
+        CvSeq *object = cvHaarDetectObjects(frame1, cascade, storage, 1.1, //1.1,//1.5, //-------------------SCALE FACTOR
+                1, //2        //------------------MIN NEIGHBOURS
+                0, //CV_HAAR_DO_CANNY_PRUNING
+                cvSize(0, 0), //cvSize( 30,30), // ------MINSIZE
+                img_size //cvSize(70,70)//cvSize(640,480)  //---------MAXSIZE
+                );
+        ROS_INFO("Total:  %d ", object->total);
+        //    std::cout << "Total: " << object->total << " cars" << std::endl;
+        for (int i = 0; i < (object ? object->total : 0); i++) {
+            CvRect *r = (CvRect*) cvGetSeqElem(object, i);
+            //            cvRectangle(image, cvPoint(r->x, r->y), cvPoint(r->x + r->width, r->y + r->height), CV_RGB(255, 0, 0), 2, 8, 0);
+            cv::rectangle(image2, cvPoint(r->x, r->y), cvPoint(r->x + r->width, r->y + r->height), CV_RGB(255, 0, 0), 2, 8, 0);
+        }
+
+
+
+
+
+
+
+        pub2_.publish(input_bridge2->toImageMsg());
+
+
 
         //        BOOST_FOREACH(const std::string& frame_id, frame_ids_) {
         for (int i = 0; i < radarDataArray_->tracks.size(); ++i) {
@@ -170,12 +228,9 @@ public:
 
 
 
+            if (uv.x - w / 2 >= 0 && uv.y - h / 2 >= 0 && uv.x + w / 2 < image.size().width - w && uv.y + h / 2 < image.size().height - h) {
 
-
-
-            if (uv.x-w/2 >= 0 && uv.y-h/2 >= 0 && uv.x+w/2 < image.size().width - w && uv.y+h/2 < image.size().height - h) {
-                //*****************haar cascade
-
+                //*****************haar cascade viejo
                 cv::Mat gray_image;
                 cv::cvtColor(image, gray_image, CV_BGR2GRAY);
                 IplImage* frame1 = new IplImage(gray_image);
@@ -183,10 +238,10 @@ public:
                 ROS_INFO("x im: [%f]", (double) uv.x);
                 ROS_INFO("y im: [%f]", (double) uv.y);
 
-                cvSetImageROI(frame1, cvRect(uv.x-w/2, uv.y-h/2, w, h));
+                cvSetImageROI(frame1, cvRect(uv.x - w / 2, uv.y - h / 2, w, h));
                 //        detect(frame1); //cvAddS(frame1, cvScalar(150), frame1);
                 //            cv::Mat img1(img);
-                cv::Mat roi(image, cv::Rect(uv.x-w/2, uv.y-h/2, w, h));
+                cv::Mat roi(image, cv::Rect(uv.x - w / 2, uv.y - h / 2, w, h));
                 //        cv::threshold(roi, roi, 50, 100, THRESH_BINARY);
                 CvSize img_size = cvGetSize(frame1);
                 CvSeq *object = cvHaarDetectObjects(frame1, cascade, storage, 1.1, //1.1,//1.5, //-------------------SCALE FACTOR
@@ -203,8 +258,36 @@ public:
                     cv::rectangle(roi, cvPoint(r->x, r->y), cvPoint(r->x + r->width, r->y + r->height), CV_RGB(255, 0, 0), 2, 8, 0);
                 }
                 cvResetImageROI(frame1);
+                //*****************fin haar cascade viejo
+                //*****************fin haar cascade nuevo
 
-                //*****************fin haar cascade
+
+                /****har version neva*/
+                //-- 1. Load the cascades
+
+                //                face_cascade.load(face_cascade_name);
+                //                /****har version neva*/
+                //                std::vector<cv::Rect> faces;
+                //                cv::Mat frame_gray;
+                //
+                //                cv::cvtColor(image, frame_gray, CV_BGR2GRAY);
+                //                cv::equalizeHist(frame_gray, frame_gray);
+                //                cv::Mat roi(frame_gray, cv::Rect(uv.x - w / 2, uv.y - h / 2, w, h));
+                //                cv::Mat roiIm(image, cv::Rect(uv.x - w / 2, uv.y - h / 2, w, h));
+                //                //-- Detect faces
+                //                face_cascade.detectMultiScale(roi, faces, 1.1, 1, 0 | CV_HAAR_SCALE_IMAGE, cv::Size(5, 5));
+                //                ROS_INFO("Total:  %d ", (int) faces.size());
+                //                for (size_t i = 0; i < faces.size(); i++) {
+                //                    ROS_INFO("x im: [%f]", (double) uv.x);
+                //                    ROS_INFO("y im: [%f]", (double) uv.y);
+                //                    ROS_INFO("x im: [%f]", (double) faces[i].x);
+                //                    ROS_INFO("y im: [%f]", (double) faces[i].y);
+                //                    cv::Point center(faces[i].x + faces[i].width * 0.5, faces[i].y + faces[i].height * 0.5);
+                //                    cv::rectangle(roiIm, cv::Point(faces[i].x, faces[i].y), cv::Point(faces[i].x + faces[i].width, faces[i].y + faces[i].height), cv::Scalar(0, 0, 255), 2, 8, 0);
+                //                }
+                //*****************fin haar cascade nuevo
+
+
             }
 
 
@@ -214,7 +297,7 @@ public:
             static const int RADIUS = 3;
             cv::circle(image, uv, RADIUS, CV_RGB(0, 255, 0), -1);
             if (radar_point.point.x != 0.0) {
-//                cv::rectangle(image, cvPoint(uv.x - w / 2, uv.y - h / 2), cvPoint(uv.x + w / 2, uv.y + h / 2), CV_RGB(0, 255, 0), 1, 8);
+                //                cv::rectangle(image, cvPoint(uv.x - w / 2, uv.y - h / 2), cvPoint(uv.x + w / 2, uv.y + h / 2), CV_RGB(0, 255, 0), 1, 8);
             }
 
             CvPoint origin = cvPoint(uv.x, uv.y);
@@ -228,7 +311,7 @@ public:
             }
 
 
-//            cv::putText(image, s, origin, cv::FONT_HERSHEY_SIMPLEX, 0.5, CV_RGB(255, 0, 0));
+            //            cv::putText(image, s, origin, cv::FONT_HERSHEY_SIMPLEX, 0.5, CV_RGB(255, 0, 0));
         }
 
 
@@ -242,24 +325,34 @@ public:
 
     }
 
-    void detect(IplImage *img) {
-        CvSize img_size = cvGetSize(img);
-        CvSeq *object = cvHaarDetectObjects(img, cascade, storage, 1.1, //1.1,//1.5, //-------------------SCALE FACTOR
-                1, //2        //------------------MIN NEIGHBOURS
-                0, //CV_HAAR_DO_CANNY_PRUNING
-                cvSize(0, 0), //cvSize( 30,30), // ------MINSIZE
-                img_size //cvSize(70,70)//cvSize(640,480)  //---------MAXSIZE
-                );
-        ROS_INFO("Total:  %d ", object->total);
-        //    std::cout << "Total: " << object->total << " cars" << std::endl;
-        for (int i = 0; i < (object ? object->total : 0); i++) {
-            CvRect *r = (CvRect*) cvGetSeqElem(object, i);
-            cvRectangle(img, cvPoint(r->x, r->y), cvPoint(r->x + r->width, r->y + r->height), CV_RGB(255, 0, 0), 2, 8, 0);
-        }
+    void detectAndDisplay(cv::Mat frame) {
+        std::vector<cv::Rect> faces;
+        cv::Mat frame_gray;
 
-        //            namedWindow("Display window", WINDOW_AUTOSIZE); // Create a window for display.
-        //            Mat img1(img);
-        //        imshow("Display window", img1); // Show our image inside it.
+        cv::cvtColor(frame, frame_gray, CV_BGR2GRAY);
+        cv::equalizeHist(frame_gray, frame_gray);
+
+        //-- Detect faces
+        face_cascade.detectMultiScale(frame_gray, faces, 1.1, 2, 0 | CV_HAAR_SCALE_IMAGE, cv::Size(30, 30));
+
+        for (size_t i = 0; i < faces.size(); i++) {
+            cv::Point center(faces[i].x + faces[i].width * 0.5, faces[i].y + faces[i].height * 0.5);
+            cv::ellipse(frame, center, cv::Size(faces[i].width * 0.5, faces[i].height * 0.5), 0, 0, 360, cv::Scalar(255, 0, 255), 4, 8, 0);
+
+            //        Mat faceROI = frame_gray(faces[i]);
+            //        std::vector<Rect> eyes;
+
+            //-- In each face, detect eyes
+            //        eyes_cascade.detectMultiScale(faceROI, eyes, 1.1, 2, 0 | CV_HAAR_SCALE_IMAGE, Size(30, 30));
+            //
+            //        for (size_t j = 0; j < eyes.size(); j++) {
+            //            Point center(faces[i].x + eyes[j].x + eyes[j].width * 0.5, faces[i].y + eyes[j].y + eyes[j].height * 0.5);
+            //            int radius = cvRound((eyes[j].width + eyes[j].height)*0.25);
+            //            circle(frame, center, radius, Scalar(255, 0, 0), 4, 8, 0);
+            //        }
+        }
+        //-- Show what you got
+        //        imshow(window_name, frame);
     }
 
 };

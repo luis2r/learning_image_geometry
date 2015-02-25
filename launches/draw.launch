@@ -14,4 +14,11 @@
     <remap from="image" to="image_out" />
     <param name="autosize" value="True" />
   </node>
+
+  <node name="output2_viewer" pkg="image_view" type="image_view">
+    <remap from="image" to="image_out2" />
+    <param name="autosize" value="True" />
+  </node>
+
+
 </launch>
