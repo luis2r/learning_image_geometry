@@ -27,6 +27,7 @@
         <in>draw_frames_bien_solopu (copy).cpp</in>
         <in>draw_frames_fucnional (copy).cpp</in>
         <in>draw_frames_puntosfor.cpp</in>
+        <in>draw_frames_save_files.cpp</in>
       </df>
     </df>
   </logicalFolder>

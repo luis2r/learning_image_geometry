@@ -8,9 +8,11 @@
         <in>draw_frames21.cpp</in>
         <in>draw_frames22.cpp</in>
         <in>draw_frames33funciona.cpp</in>
+        <in>draw_framesBienUsar.cpp</in>
         <in>draw_frames_bien_solopu (copy).cpp</in>
         <in>draw_frames_fucnional (copy).cpp</in>
         <in>draw_frames_puntosfor.cpp</in>
+        <in>draw_frames_save_files.cpp</in>
       </df>
     </df>
     <logicalFolder name="ExternalFiles"
@@ -56,6 +58,8 @@
       </item>
       <item path="src/draw_frames33funciona.cpp" ex="false" tool="1" flavor2="4">
       </item>
+      <item path="src/draw_framesBienUsar.cpp" ex="false" tool="1" flavor2="0">
+      </item>
       <item path="src/draw_frames_bien_solopu (copy).cpp"
             ex="false"
             tool="1"
@@ -67,6 +71,8 @@
             flavor2="4">
       </item>
       <item path="src/draw_frames_puntosfor.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="src/draw_frames_save_files.cpp" ex="false" tool="1" flavor2="0">
       </item>
     </conf>
   </confs>
